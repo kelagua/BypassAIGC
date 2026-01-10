@@ -222,6 +222,7 @@ jobs:
           name: AI学术写作助手-macOS-${{ steps.version.outputs.version }}
           path: package/AI学术写作助手-macOS-*.tar.gz
           retention-days: 30
+          
   build-freebsd:
     runs-on: ubuntu-latest
     steps:
@@ -234,13 +235,15 @@ jobs:
           usesh: true
           release: '14.0'
           prepare: |
-            pkg install -y python311 py311-pip node20 npm-node20 bash
+            pkg install -y python311 py311-pip node20 npm-node20 bash \
+              libxml2 libxslt py311-lxml pkgconf
             python3.11 -m ensurepip
           run: |
             cd package
 
             # 安装 Python 依赖
             python3.11 -m pip install --upgrade pip
+            python3.11 -m pip install pyinstaller
             python3.11 -m pip install -r requirements.txt
 
             # 安装前端依赖
