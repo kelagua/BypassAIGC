@@ -29,10 +29,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8801',
         changeOrigin: true,
         // 不需要重写路径，后端路由已经以 /api 为前缀
       },
     },
   },
 })
+
