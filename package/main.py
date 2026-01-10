@@ -479,7 +479,7 @@ SEGMENT_SKIP_THRESHOLD=15
 
 def main():
     """主入口函数"""
-    port = 8000
+    port = 8801
     host = "127.0.0.1"
     
     print("\n" + "="*60)
