@@ -34,17 +34,20 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates curl software-properties-common \
             build-essential binutils patchelf \
-            python3.9 python3.9-venv python3.9-distutils
+            python3.9 python3.9-venv python3.9-distutils python3.9-dev
 
           python3.9 --version
           objdump --version
 
-          # 为 Python 3.9 安装 pip（>=3.9 可用通用 get-pip.py）
+          # 为 Python 3.9 安装 pip
           curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
           python3.9 /tmp/get-pip.py --ignore-installed
           python3.9 -m pip --version
 
-          # 让后续步骤继续用 python/pip 命令（与你原模板兼容）
+          # 验证 libpython 是否存在（PyInstaller 需要）
+          ls -l /usr/lib/x86_64-linux-gnu/libpython3.9.so* || true
+
+          # 让后续步骤继续用 python/pip 命令
           update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
           update-alternatives --install /usr/bin/pip pip "$(command -v pip3)" 1
           python --version
