@@ -19,5 +19,149 @@ setuptools<81
 ```
 ## 3.修改workflow
 ```code
+name: Build Executable
 
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: false
+        default: 'dev'
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python (3.9+ inside ubuntu:20.04 container)
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates curl software-properties-common \
+            build-essential binutils patchelf \
+            python3.9 python3.9-venv python3.9-distutils python3.9-dev
+
+          python3.9 --version
+          objdump --version
+
+          # 为 Python 3.9 安装 pip
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+          python3.9 /tmp/get-pip.py --ignore-installed
+          python3.9 -m pip --version
+
+          # 验证 libpython 是否存在（PyInstaller 需要）
+          ls -l /usr/lib/x86_64-linux-gnu/libpython3.9.so* || true
+
+          # 让后续步骤继续用 python/pip 命令
+          update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
+          update-alternatives --install /usr/bin/pip pip "$(command -v pip3)" 1
+          python --version
+          pip --version
+
+      - name: Setup Node.js
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Print pip index/config (debug)
+        run: |
+          set -x
+          python -m pip config list -v || true
+          python -m pip debug -v | sed -n '/Index URLs/,+30p' || true
+          env | grep -E '^PIP_' || true
+
+      - name: Install Python dependencies
+        working-directory: package
+        run: |
+          python -m pip install --upgrade pip
+          # 强制官方 PyPI，避免镜像不同步导致版本缺失
+          pip install --index-url https://pypi.org/simple -r requirements.txt
+          pip install --index-url https://pypi.org/simple jaraco.text jaraco.functools jaraco.context jaraco.collections
+
+      - name: Install frontend dependencies
+        working-directory: package/frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: package/frontend
+        run: npm run build
+
+      - name: Copy frontend build to static
+        working-directory: package
+        run: |
+          rm -rf static
+          cp -r frontend/dist static
+
+      - name: Build with PyInstaller
+        working-directory: package
+        run: pyinstaller app.spec --clean
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev-${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tar archive
+        working-directory: package
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          tar -czvf "AI学术写作助手-Linux-${version}.tar.gz" -C dist "AI学术写作助手"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI学术写作助手-Linux-${{ steps.version.outputs.version }}
+          path: package/AI学术写作助手-Linux-*.tar.gz
+          retention-days: 30
+
+  release:
+    needs: [build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
