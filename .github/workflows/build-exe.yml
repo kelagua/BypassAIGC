@@ -20,7 +20,6 @@ jobs:
     container:
       image: ubuntu:20.04
 
-    # GitHub Docs 提到：容器 job 默认 shell 是 sh，这里强制 bash，避免脚本兼容问题
     defaults:
       run:
         shell: bash
@@ -31,10 +30,16 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates curl git build-essential \
-            python3 python3-venv python3-pip \
+            python3 python3-venv python3-distutils \
             patchelf
           python3 --version
-          pip3 --version
+
+      - name: Repair/upgrade pip (fix pip._vendor.certifi)
+        run: |
+          set -e
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+          python3 /tmp/get-pip.py --ignore-installed
+          python3 -m pip --version
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,9 +62,8 @@ jobs:
         working-directory: package
         run: |
           python3 -m pip install --upgrade pip
-          # 可选：让 PyInstaller 更贴合当前系统/避免某些 wheel 带来的兼容性问题
+          # 可选：让 PyInstaller 更贴合当前系统（更“低”glibc基线）
           python3 -m pip install --no-binary :pyinstaller: pyinstaller
-          # 强制从官方 PyPI simple index 找包，避免镜像不同步
           python3 -m pip install --index-url https://pypi.org/simple -r requirements.txt
 
       - name: Install frontend dependencies
