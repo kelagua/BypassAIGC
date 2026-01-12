@@ -94,7 +94,7 @@ jobs:
 
       - name: Build with PyInstaller
         working-directory: package
-        run: pyinstaller app.spec --clean --collect-submodules jaraco
+        run: pyinstaller app.spec --clean
 
       - name: Get version
         id: version
