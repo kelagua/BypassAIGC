@@ -26,3 +26,4 @@ lxml>=4.9.0
 
 # 打包工具
 pyinstaller==6.3.0
+setuptools<81
