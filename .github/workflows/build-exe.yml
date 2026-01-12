@@ -76,6 +76,7 @@ jobs:
           python -m pip install --upgrade pip
           # 强制官方 PyPI，避免镜像不同步导致版本缺失
           pip install --index-url https://pypi.org/simple -r requirements.txt
+          pip install --index-url https://pypi.org/simple jaraco.text jaraco.functools jaraco.context jaraco.collections
 
       - name: Install frontend dependencies
         working-directory: package/frontend
@@ -93,7 +94,7 @@ jobs:
 
       - name: Build with PyInstaller
         working-directory: package
-        run: pyinstaller app.spec --clean
+        run: pyinstaller app.spec --clean --collect-submodules jaraco
 
       - name: Get version
         id: version
