@@ -11,7 +11,6 @@ on:
         required: false
         default: 'dev'
 
-# Default permissions for all jobs
 permissions:
   contents: read
 
@@ -20,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:20.04
+
+    # GitHub Docs 提到：容器 job 默认 shell 是 sh，这里强制 bash，避免脚本兼容问题
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Install base tools
@@ -42,13 +46,21 @@ jobs:
           node --version
           npm --version
 
-      - name: Install Python dependencies
+      - name: Print pip index/config (debug)
+        run: |
+          set -x
+          python3 -m pip config list -v || true
+          python3 -m pip debug -v | sed -n '/Index URLs/,+30p' || true
+          env | grep -E '^PIP_' || true
+
+      - name: Install Python dependencies (force PyPI index)
         working-directory: package
         run: |
           python3 -m pip install --upgrade pip
-          # 建议：避免拿到不兼容的预编译 PyInstaller 组件，改用源码安装
-          pip install --no-binary :pyinstaller: pyinstaller
-          pip install -r requirements.txt
+          # 可选：让 PyInstaller 更贴合当前系统/避免某些 wheel 带来的兼容性问题
+          python3 -m pip install --no-binary :pyinstaller: pyinstaller
+          # 强制从官方 PyPI simple index 找包，避免镜像不同步
+          python3 -m pip install --index-url https://pypi.org/simple -r requirements.txt
 
       - name: Install frontend dependencies
         working-directory: package/frontend
