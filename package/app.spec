@@ -57,6 +57,18 @@ hidden_imports += collect_submodules('mistune')
 hidden_imports += collect_submodules('docx')
 hidden_imports += collect_submodules('lxml')
 
+# === 新增：setuptools/pkg_resources/jaraco 修复 ===
+hidden_imports += [
+    'jaraco',
+    'jaraco.text',
+    'jaraco.functools',
+    'jaraco.context',
+    'jaraco.collections',
+]
+hidden_imports += collect_submodules('jaraco')
+hidden_imports += collect_submodules('pkg_resources._vendor.jaraco')
+
+
 # 分析主入口文件
 a = Analysis(
     ['main.py'],
