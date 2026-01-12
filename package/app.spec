@@ -91,6 +91,7 @@ a = Analysis(
         'pandas',
         'scipy',
         'PIL',
+        'pkg_resources',  
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
